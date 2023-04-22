@@ -19,7 +19,7 @@ keywords = ["architecture", "robot", "Hot wire cutting"]
 icon = "data/zaha.png"
 
 # Preview to show in the extension manager
-preview_image = " "
+preview_image = "data/preview2.png"
 
 
 # Use omni.ui to build simple UI

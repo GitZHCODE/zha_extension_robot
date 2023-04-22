@@ -517,9 +517,9 @@ class ZhcodeRobotWindow(ui.Window):
         #print(self.ct)
 
     def on_export_gcode(self,path):
-        gcode = ctypes.c_char_p()
-        zExtRobotModule.ext_zTsRobot_exportGCodeABB(ctypes.byref(self.robot),gcode)
-        print(gcode)
+        #gcode = ctypes.c_char_p()
+        #zExtRobotModule.ext_zTsRobot_exportGCodeABB(ctypes.byref(self.robot),gcode)
+        #print(gcode)
         self.on_export_btn_click(path)
 
     def _build_fn(self):      
