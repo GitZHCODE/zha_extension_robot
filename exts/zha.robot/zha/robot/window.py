@@ -223,7 +223,14 @@ class ZhcodeRobotWindow(ui.Window):
         else:
             fabMeshDir = myPath
         fabMeshDirCStr = ctypes.c_char_p(fabMeshDir.encode())
+
         zExtRobotModule.ext_zTsRobot_setFabricationMeshOBJFromDir(ctypes.byref(self.robot),fabMeshDirCStr)
+
+        #FabBase_Matrix = [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [1.7, -1, -0.8, 1] ]
+        #FabBase_transform = zExtTransform()
+        #FabBase_transform.updateTransformFromListOfLists(FabBase_Matrix)
+        #zExtRobotModule.ext_zTsRobot_setFabricationPlane(ctypes.byref(self.robot),ctypes.byref(FabBase_transform))
+
         print(fabMeshDir)
 
     def on_bake_fabMesh(self,path):
@@ -556,7 +563,7 @@ class ZhcodeRobotWindow(ui.Window):
                         self.load_stage_button = CustomPathButtonWidget(label="Stage_path",path=".../data/meshes/ABB/abb_robot.usda",btn_label="1. Load_stage",btn_callback=self.on_load_robot_stage)
                         self.reset_robot_button = CustomPathButtonWidget(label="ABB_robot",path="ABB_IRB_4600_255",btn_label="2. Reset_Robot",btn_callback=self.on_reset_primMesh)
                         self.read_jsonMesh_button = CustomPathButtonWidget(label="Json_path",path=".../data/meshes/fabMesh/json",btn_label="3. Set_jsonMesh",btn_callback=self.on_read_json_fabMesh)
-                        #self.read_objMesh_button = CustomPathButtonWidget(label="Obj_path",path=".../data/meshes/fabMesh/obj",btn_label="3. Set_objMesh",btn_callback=self.on_read_obj_fabMesh)
+                        self.read_objMesh_button = CustomPathButtonWidget(label="Obj_path",path=".../data/meshes/fabMesh/obj",btn_label="3. Set_objMesh",btn_callback=self.on_read_obj_fabMesh)
                         self.bake_fabMesh_button = CustomPathButtonWidget(label="Bake_path",path="/abb_robot/fabMeshes",btn_label="4. Bake_fabMesh",btn_callback=self.on_bake_fabMesh)
                           
                 with ui.CollapsableFrame("II. compute".upper(), name="group", build_header_fn=self._build_collapsable_header):
