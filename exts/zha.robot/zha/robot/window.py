@@ -545,8 +545,13 @@ class ZhcodeRobotWindow(ui.Window):
         #print(self.ct)
 
     def on_export_gcode(self,path):
-        newPath = self.export_gcode_button.get_path()
-        gcodeDir = f"{EXTENSION_FOLDER_PATH}{newPath}"
+        myPath = self.export_gcode_button.get_path()
+        if myPath[:3] == "...":
+            myPath = myPath[3:]
+            gcodeDir = f"{EXTENSION_FOLDER_PATH}{myPath}"
+        else:
+            gcodeDir = myPath
+            
         gcodeDirCtype = ctypes.c_char_p(gcodeDir.encode())
         print(gcodeDir)
         zExtRobotModule.ext_zTsRobot_exportGCodeABB(ctypes.byref(self.robot),gcodeDirCtype)       
