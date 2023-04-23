@@ -88,7 +88,8 @@ class ZhcodeRobotWindow(ui.Window):
         self.frame_slider = None
         self.bool_widget_fk = None        
         self.bool_realtime_update = None
-        self.read_fabMesh_button = None
+        self.read_jsonMesh_button = None
+        self.read_objMesh_button = None
         self.bake_fabMesh_button = None
         self.load_stage_button = None
         self.reset_robot_button  = None
@@ -181,8 +182,12 @@ class ZhcodeRobotWindow(ui.Window):
             ui.Line(style_type_name_override="HeaderLine")
 
     def on_load_robot_stage(self,path):
-        newPath = self.load_stage_button.get_path()
-        stageDir = f"{EXTENSION_FOLDER_PATH}{newPath}"
+        myPath = self.load_stage_button.get_path()
+        if myPath[:3] == "...":
+            myPath = myPath[3:]
+            stageDir = f"{EXTENSION_FOLDER_PATH}{myPath}"
+        else:
+            stageDir = myPath
         context = omni.usd.get_context()
         results = context.open_stage(stageDir)
 
@@ -199,12 +204,27 @@ class ZhcodeRobotWindow(ui.Window):
         self.prim_cutter = self.stage.GetPrimAtPath(self.prim_cutter_path)
         print("reset!")
 
-    def on_read_fabMesh(self,path):
-            newPath = self.read_fabMesh_button.get_path()
-            fabMeshDir = f"{EXTENSION_FOLDER_PATH}{newPath}"
-            fabMeshDirCStr = ctypes.c_char_p(fabMeshDir.encode())
-            zExtRobotModule.ext_zTsRobot_setFabricationMeshJSONFromDir(ctypes.byref(self.robot),fabMeshDirCStr)
-            print(fabMeshDir)
+    def on_read_json_fabMesh(self,path):
+        myPath = self.read_jsonMesh_button.get_path()
+        if myPath[:3] == "...":
+            myPath = myPath[3:]
+            fabMeshDir = f"{EXTENSION_FOLDER_PATH}{myPath}"
+        else:
+            fabMeshDir = myPath
+        fabMeshDirCStr = ctypes.c_char_p(fabMeshDir.encode())
+        zExtRobotModule.ext_zTsRobot_setFabricationMeshJSONFromDir(ctypes.byref(self.robot),fabMeshDirCStr)
+        print(fabMeshDir)
+
+    def on_read_obj_fabMesh(self,path):
+        myPath = self.read_objMesh_button.get_path()
+        if myPath[:3] == "...":
+            myPath = myPath[3:]
+            fabMeshDir = f"{EXTENSION_FOLDER_PATH}{myPath}"
+        else:
+            fabMeshDir = myPath
+        fabMeshDirCStr = ctypes.c_char_p(fabMeshDir.encode())
+        zExtRobotModule.ext_zTsRobot_setFabricationMeshOBJFromDir(ctypes.byref(self.robot),fabMeshDirCStr)
+        print(fabMeshDir)
 
     def on_bake_fabMesh(self,path):
         fabMeshArray = zExtMeshArray()
@@ -533,9 +553,10 @@ class ZhcodeRobotWindow(ui.Window):
                 with ui.CollapsableFrame("I. initialize".upper(), name="group",build_header_fn=self._build_collapsable_header):
                     with ui.VStack(height=0, spacing=SPACING):
                         ui.Spacer(height=1)
-                        self.load_stage_button = CustomPathButtonWidget(label="Stage_path",path="/data/meshes/ABB/abb_robot.usda",btn_label="1. Load_stage",btn_callback=self.on_load_robot_stage)
-                        self.reset_robot_button = CustomPathButtonWidget(label="ABB_robot",path="ABB_IRB_4600_255",btn_label="2. Reset_Robot",btn_callback=self.on_reset_primMesh)                        
-                        self.read_fabMesh_button = CustomPathButtonWidget(label="Mesh_path",path="/data/meshes/fabMesh",btn_label="3. Set_fabMesh",btn_callback=self.on_read_fabMesh)
+                        self.load_stage_button = CustomPathButtonWidget(label="Stage_path",path=".../data/meshes/ABB/abb_robot.usda",btn_label="1. Load_stage",btn_callback=self.on_load_robot_stage)
+                        self.reset_robot_button = CustomPathButtonWidget(label="ABB_robot",path="ABB_IRB_4600_255",btn_label="2. Reset_Robot",btn_callback=self.on_reset_primMesh)
+                        self.read_jsonMesh_button = CustomPathButtonWidget(label="Json_path",path=".../data/meshes/fabMesh/json",btn_label="3. Set_jsonMesh",btn_callback=self.on_read_json_fabMesh)
+                        #self.read_objMesh_button = CustomPathButtonWidget(label="Obj_path",path=".../data/meshes/fabMesh/obj",btn_label="3. Set_objMesh",btn_callback=self.on_read_obj_fabMesh)
                         self.bake_fabMesh_button = CustomPathButtonWidget(label="Bake_path",path="/abb_robot/fabMeshes",btn_label="4. Bake_fabMesh",btn_callback=self.on_bake_fabMesh)
                           
                 with ui.CollapsableFrame("II. compute".upper(), name="group", build_header_fn=self._build_collapsable_header):
