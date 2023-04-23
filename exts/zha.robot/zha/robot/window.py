@@ -92,6 +92,7 @@ class ZhcodeRobotWindow(ui.Window):
         self.bake_fabMesh_button = None
         self.load_stage_button = None
         self.reset_robot_button  = None
+        self.export_gcode_button = None
         
         self.current_frame = 0
         self.max_frame = 100
@@ -517,10 +518,12 @@ class ZhcodeRobotWindow(ui.Window):
         #print(self.ct)
 
     def on_export_gcode(self,path):
-        #gcode = ctypes.c_char_p()
-        #zExtRobotModule.ext_zTsRobot_exportGCodeABB(ctypes.byref(self.robot),gcode)
-        #print(gcode)
-        self.on_export_btn_click(path)
+        newPath = self.export_gcode_button.get_path()
+        gcodeDir = f"{EXTENSION_FOLDER_PATH}{newPath}"
+        gcodeDirCtype = ctypes.c_char_p(gcodeDir.encode())
+        print(gcodeDir)
+        zExtRobotModule.ext_zTsRobot_exportGCodeABB(ctypes.byref(self.robot),gcodeDirCtype)       
+        self.on_export_btn_click(gcodeDir)
 
     def _build_fn(self):      
         with ui.ScrollingFrame(name="window_bg",horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF):
@@ -592,6 +595,6 @@ class ZhcodeRobotWindow(ui.Window):
                                 build_header_fn=self._build_collapsable_header):
                     with ui.VStack(height=0, spacing=SPACING):
                         ui.Spacer(height=3) 
-                        CustomPathButtonWidget(label="Export_path",path="/data/export/gcode.txt",btn_label="Export",btn_callback=self.on_export_gcode)
+                        self.export_gcode_button = CustomPathButtonWidget(label="Export_path",path="/data/export/gcode",btn_label="Export",btn_callback=self.on_export_gcode)
                 
                 ui.Spacer(height=10)
