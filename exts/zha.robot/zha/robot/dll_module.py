@@ -7,5 +7,4 @@ EXTENSION_FOLDER_PATH = pathlib.Path(
 )
 
 class DLLConfig:
-    #zExternalDLLFile = ctypes.CDLL(f"{EXTENSION_FOLDER_PATH}/data/zSpace_External.dll")
     zExternalDLLFile = ctypes.CDLL(f"{EXTENSION_FOLDER_PATH}/data/zSpace_External_2.dll")

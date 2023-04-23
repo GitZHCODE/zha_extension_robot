@@ -1,6 +1,6 @@
 [package]
 
-version = "0.0.1"
+version = "0.0.6"
 title = "ZHA Robot Ext"
 description = "ZHA Robot extension template based on python."
 readme  = "docs/README.md"

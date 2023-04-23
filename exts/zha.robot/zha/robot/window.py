@@ -107,6 +107,7 @@ class ZhcodeRobotWindow(ui.Window):
         self.stage_listener = None
         self.bool_listening = False 
         self.timeline = None      
+        self.bool_playmode = False
         
         self.robot = zExtRobot()
 
@@ -127,9 +128,8 @@ class ZhcodeRobotWindow(ui.Window):
         homePlane_Matrix = [[ 1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [1.8, -0.25, 0, 1] ]
         homePlane_transform = zExtTransform()
         homePlane_transform.updateTransformFromListOfLists(homePlane_Matrix)
-        zExtRobotModule.ext_zTsRobot_setRobotHomePlane(ctypes.byref(self.robot), ctypes.byref(homePlane_transform))
+        zExtRobotModule.ext_zTsRobot_setRobotHomePlane(ctypes.byref(self.robot), ctypes.byref(homePlane_transform))     
 
-        #self.frame.set_build_fn(self._build_fn)
         self.build_robot_window()
 
     def destroy(self):
@@ -141,12 +141,10 @@ class ZhcodeRobotWindow(ui.Window):
 
     @property
     def label_width(self):
-        """The width of the attribute label"""
         return self.__label_width
 
     @label_width.setter
     def label_width(self, value):
-        """The width of the attribute label"""
         self.__label_width = value
         self.frame.rebuild()
 
@@ -163,7 +161,7 @@ class ZhcodeRobotWindow(ui.Window):
     def _build_title(self):
         with ui.VStack():
             ui.Spacer(height=2)
-            ui.Label("ZHA Robot - 0.0.1", name="window_title")
+            ui.Label("ZHA Robot - 0.0.6", name="window_title")
             ui.Spacer(height=5)
 
     def _build_collapsable_header(self, collapsed, title):
@@ -191,7 +189,7 @@ class ZhcodeRobotWindow(ui.Window):
         context = omni.usd.get_context()
         results = context.open_stage(stageDir)
 
-    def on_reset_primMesh(self,path): 
+    def on_reset_robot(self,path): 
         self.stage = omni.usd.get_context().get_stage()
         self.prim_J1 = self.stage.GetPrimAtPath(self.prim_J1_path)
         self.prim_J2 = self.stage.GetPrimAtPath(self.prim_J2_path)
@@ -202,6 +200,27 @@ class ZhcodeRobotWindow(ui.Window):
         self.prim_EE = self.stage.GetPrimAtPath(self.prim_EE_path)
         self.prim_target = self.stage.GetPrimAtPath(self.prim_target_path)            
         self.prim_cutter = self.stage.GetPrimAtPath(self.prim_cutter_path)
+
+        self.robot = zExtRobot()
+
+        jsonFileSTR = f"{EXTENSION_FOLDER_PATH}/data/ABB_IRB_4600_255.json"
+        jsonCStr = ctypes.c_char_p(jsonFileSTR.encode())        
+        zExtRobotModule.ext_zTsRobot_createFromFile(ctypes.byref(self.robot),jsonCStr)
+
+        ee_transform = zExtTransform() 
+        eematrix = [  [1, 0, 0, 0],  [0, 1, 0, 0],  [0, 0, 1, 0],  [0, 0, -0.994,1]]
+        ee_transform.updateTransformFromListOfLists(eematrix)
+        zExtRobotModule.ext_zTsRobot_setEndEffector(ctypes.byref(self.robot), ctypes.byref(ee_transform))
+        
+        robotBaseMatrix = [ [0.965926,0,-0.258819,0], [0,1,0,0], [0.258819,0,0.965926,0], [0,0,0,1]]
+        robot_transform = zExtTransform()
+        robot_transform.updateTransformFromListOfLists(robotBaseMatrix)
+        zExtRobotModule.ext_zTsRobot_setRobotBasePlane(ctypes.byref(self.robot), ctypes.byref(robot_transform))        
+
+        homePlane_Matrix = [[ 1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [1.8, -0.25, 0, 1] ]
+        homePlane_transform = zExtTransform()
+        homePlane_transform.updateTransformFromListOfLists(homePlane_Matrix)
+        zExtRobotModule.ext_zTsRobot_setRobotHomePlane(ctypes.byref(self.robot), ctypes.byref(homePlane_transform))
         print("reset!")
 
     def on_read_json_fabMesh(self,path):
@@ -244,6 +263,8 @@ class ZhcodeRobotWindow(ui.Window):
         newPath = self.bake_fabMesh_button.get_path()
         fabMeshNum = fabMeshArray.arrayCount
         print("fabMeshNum", fabMeshNum)
+
+        prim_mesh = self.stage.DefinePrim(f"{newPath}", 'Xform') 
             
         for i in range(fabMeshNum):  
             points_1d = []
@@ -255,11 +276,7 @@ class ZhcodeRobotWindow(ui.Window):
             points = []
             for k in range(0,len(points_1d),3):
                 points.append(Gf.Vec3f(points_1d[k],points_1d[k+1],points_1d[k+2]))
-            #print(points_1d)
-            #print(points)
-            #print(faceCount)
-            #print(faceConnect)
-
+            
             point_attr = prim_mesh.GetAttribute('points')
             point_attr.Set(points)
             face_vertex_counts_attr = prim_mesh.GetAttribute('faceVertexCounts')
@@ -359,7 +376,7 @@ class ZhcodeRobotWindow(ui.Window):
     def on_compute_targets(self):
         targetsCount = ctypes.c_int(0)
         zExtRobotModule.ext_zTsRobot_computeTargetzTsRHWC(ctypes.byref(self.robot), ctypes.byref(targetsCount))
-        print("targetsCount",targetsCount)
+        print("targetsCount",targetsCount.value)
 
         targets_list = [zExtTransform() for i in range(targetsCount.value)]
         reachability_list = [False for i in range(targetsCount.value)]
@@ -375,8 +392,6 @@ class ZhcodeRobotWindow(ui.Window):
 
         self.max_frame = targetsCount.value
         self.targets_num = targetsCount.value
-        #self.frame_slider.set_max(targetsCount.value)
-        #self.frame_slider._build_body()
 
         self.all_targets.clear()
         self.all_reachability.clear()
@@ -388,9 +403,10 @@ class ZhcodeRobotWindow(ui.Window):
             self.all_targets.append(targets[i].getGfMatrixTransformed())
             self.all_reachability.append(targetReachability[i])
             self.target_type.append(targetsTypes[i])
-            #self.cutter_angle.append(angles[i])
+            #self.cutter_angle.append(180)
 
-            #will fix the issue in next version, right now just setup cases            
+            #will fix the issue in next version, right now just setup cases
+            
             if i > 2 and i < 13:
                 self.cutter_angle.append(90)
             elif i > 15 and i < 25:
@@ -400,7 +416,7 @@ class ZhcodeRobotWindow(ui.Window):
             elif i > 41 and i < 51:
                 self.cutter_angle.append(90)
             else:
-                self.cutter_angle.append(180)
+                self.cutter_angle.append(180)            
             
             #print("targets",i,targets[i].getGfMatrixTransformed())     
 
@@ -455,6 +471,7 @@ class ZhcodeRobotWindow(ui.Window):
     def on_pause_frame(self):
         if self.timeline:
             self.timeline.pause()
+            #self.timeline.destroy_timeline()
         self.timeline = None
 
     def on_create_animation(self):
@@ -504,7 +521,9 @@ class ZhcodeRobotWindow(ui.Window):
             #self.joint1_slider.model.set_value(time=i*speed, value =self.robot.robotJointRotation[0])
 
             self.prim_cutter.GetAttribute('xformOp:rotateXYZ').Set(time=i*speed, value =Gf.Vec3d(0,self.cutter_angle[i],0))
-        
+     
+    def on_playmode(self):
+        self.bool_playmode = not self.bool_playmode
 
     def on_change_target(self):
         bool_reach = self.compute_inverseKinematics()
@@ -513,11 +532,11 @@ class ZhcodeRobotWindow(ui.Window):
         self.color_robot(bool_reach)        
 
     async def on_change_target_async(self):
-        if(self.timeline):
-            current_time = self.timeline.get_current_time()
-            self.current_frame = round(current_time)
-            self.frame_slider.model.set_value(self.current_frame)
-        else:
+        #if(self.timeline):
+            #current_time = self.timeline.get_current_time()
+            #self.current_frame = round(current_time)
+            #self.frame_slider.model.set_value(self.current_frame)
+        #else:
             bool_reach = self.compute_inverseKinematics()
             self.update_robot_joints()
             self.update_joints_rotation_slider()
@@ -525,7 +544,6 @@ class ZhcodeRobotWindow(ui.Window):
 
     def on_change_listner(self):
         self.bool_listening = not self.bool_listening
-        #self.bool_realtime_update.get_value()
         if self.bool_listening:
             self.stage_listener = Tf.Notice.Register(Usd.Notice.ObjectsChanged, self.noticeChanged, self.stage)
             print("RealTime Update Target",self.bool_listening)
@@ -551,11 +569,14 @@ class ZhcodeRobotWindow(ui.Window):
             gcodeDir = f"{EXTENSION_FOLDER_PATH}{myPath}"
         else:
             gcodeDir = myPath
-            
+
         gcodeDirCtype = ctypes.c_char_p(gcodeDir.encode())
         print(gcodeDir)
         zExtRobotModule.ext_zTsRobot_exportGCodeABB(ctypes.byref(self.robot),gcodeDirCtype)       
         self.on_export_btn_click(gcodeDir)
+
+    def test():
+        print("1")
 
     def _build_fn(self):      
         with ui.ScrollingFrame(name="window_bg",horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF):
@@ -566,17 +587,19 @@ class ZhcodeRobotWindow(ui.Window):
                     with ui.VStack(height=0, spacing=SPACING):
                         ui.Spacer(height=1)
                         self.load_stage_button = CustomPathButtonWidget(label="Stage_path",path=".../data/meshes/ABB/abb_robot.usda",btn_label="1. Load_stage",btn_callback=self.on_load_robot_stage)
-                        self.reset_robot_button = CustomPathButtonWidget(label="ABB_robot",path="ABB_IRB_4600_255",btn_label="2. Reset_Robot",btn_callback=self.on_reset_primMesh)
-                        self.read_jsonMesh_button = CustomPathButtonWidget(label="Json_path",path=".../data/meshes/fabMesh/json",btn_label="3. Set_jsonMesh",btn_callback=self.on_read_json_fabMesh)
-                        self.read_objMesh_button = CustomPathButtonWidget(label="Obj_path",path=".../data/meshes/fabMesh/obj",btn_label="3. Set_objMesh",btn_callback=self.on_read_obj_fabMesh)
+                        self.reset_robot_button = CustomPathButtonWidget(label="ABB_robot",path="ABB_IRB_4600_255",btn_label="2. Reset_Robot",btn_callback=self.on_reset_robot)
+                        self.read_jsonMesh_button = CustomPathButtonWidget(label="Json_path",path=".../data/meshes/fabMesh/json",btn_label="3.1 Set_jsonMesh",btn_callback=self.on_read_json_fabMesh)
+                        self.read_objMesh_button = CustomPathButtonWidget(label="Obj_path",path=".../data/meshes/fabMesh/obj",btn_label="3.2 Set_objMesh",btn_callback=self.on_read_obj_fabMesh)
                         self.bake_fabMesh_button = CustomPathButtonWidget(label="Bake_path",path="/abb_robot/fabMeshes",btn_label="4. Bake_fabMesh",btn_callback=self.on_bake_fabMesh)
                           
                 with ui.CollapsableFrame("II. compute".upper(), name="group", build_header_fn=self._build_collapsable_header):
                     with ui.VStack(height=0, spacing=SPACING):
                         ui.Spacer(height=3)
                         self.bool_widget_fk = CustomBoolWidget(label="FK", default_value=False)
-                        #self.bool_realtime_update = CustomBoolWidget(label="RealTime", default_value= False)
-                        ui.Button("RealTime Update Target",clicked_fn = self.on_change_listner)
+                        ui.Button("RealTime Update Target",clicked_fn = self.on_change_listner)                        
+                        with ui.HStack(height=10): 
+                            ui.Button("Robot_home",clicked_fn= self.on_initialize_transform)
+                            ui.Button("Robot_move",clicked_fn = self.on_change_target)
                         ui.Spacer(height=3) 
                         self.joint1_slider = CustomSliderWidget(min=self.robot.robotJointRotationMin[0], max=self.robot.robotJointRotationMax[0], 
                                                 num_type = "float",label="J1_Rotation", display_range = True, default_val=self.robot.robotJointRotationHome[0])
@@ -600,34 +623,32 @@ class ZhcodeRobotWindow(ui.Window):
 
                         self.joint6_slider = CustomSliderWidget(min=self.robot.robotJointRotationMin[5], max=self.robot.robotJointRotationMax[5], 
                                                 num_type = "float",label="J6_Rotation", display_range = True, default_val=self.robot.robotJointRotationHome[5])
-                        self.joint6_slider.model.add_value_changed_fn(self.on_change_joint_rotation)
-
-                                               
-                        with ui.HStack(height=10): 
-                            ui.Button("Robot_home",clicked_fn= self.on_initialize_transform)
-                            ui.Button("Robot_move",clicked_fn = self.on_change_target)
-                            
-                        
+                        self.joint6_slider.model.add_value_changed_fn(self.on_change_joint_rotation)                                               
+                                                
 
                 with ui.CollapsableFrame("III. animation".upper(), name="group",build_header_fn=self._build_collapsable_header):
                     with ui.VStack(height=0, spacing=SPACING):
-                        ui.Button("5. Compute_target",clicked_fn = self.on_compute_targets)
+                        ui.Spacer(height=5)
                         self.frame_slider = CustomSliderWidget(min=0, max=round(self.max_frame-1), num_type = "int",label="Cur_Frame", 
                                                       display_range = True, default_val=0)
-                        self.frame_slider.model.add_value_changed_fn(self.on_change_frame) 
+                        self.frame_slider.model.add_value_changed_fn(self.on_change_frame)
+                        ui.Button("5. Compute_target",clicked_fn = self.on_compute_targets)
+                        #ui.Button("Play mode",clicked_fn = self.on_playmode)
                         with ui.HStack(height=10):
-                            ui.Button("Previous_frame",clicked_fn= self.on_previous_frame) 
+                            ui.Button("Previous_frame",clicked_fn= self.on_previous_frame)                             
+                            ui.Button("Next_frame",clicked_fn= self.on_next_frame)                       
+                        
+
+                        ui.Button("6. Create_Animation!",clicked_fn = self.on_create_animation)
+                        with ui.HStack(height=10):
                             ui.Button("Play",clicked_fn = self.on_play_frame)
                             ui.Button("Pause",clicked_fn = self.on_pause_frame)
-                            ui.Button("Next_frame",clicked_fn= self.on_next_frame)
-                        
-                        ui.Button("6. Create_Animation",clicked_fn = self.on_create_animation)
                                                                      
 
                 with ui.CollapsableFrame("IV. export".upper(), name="group",
                                 build_header_fn=self._build_collapsable_header):
                     with ui.VStack(height=0, spacing=SPACING):
                         ui.Spacer(height=3) 
-                        self.export_gcode_button = CustomPathButtonWidget(label="Export_path",path="/data/export/gcode",btn_label="Export",btn_callback=self.on_export_gcode)
+                        self.export_gcode_button = CustomPathButtonWidget(label="Export_path",path=".../data/export/gcode",btn_label="Export",btn_callback=self.on_export_gcode)
                 
                 ui.Spacer(height=10)
